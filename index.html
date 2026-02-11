@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Industry 4.0 Logo Generator</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Industry 4.0 Logo Generator</h1>
+      <p>Choose a design, pick colors, then download as PNG or ICO.</p>
+    </header>
+
+    <main>
+      <section class="controls">
+        <div class="group">
+          <label>Design</label>
+          <div class="designs">
+            <label><input type="radio" name="design" value="gear" checked> Gear Network</label>
+            <label><input type="radio" name="design" value="chip"> Chip Circuit</label>
+            <label><input type="radio" name="design" value="hex"> Hexagon Grid</label>
+          </div>
+        </div>
+
+        <div class="group">
+          <label>Colors</label>
+          <div class="colors">
+            <div><label>Primary<br><input id="colorPrimary" type="color" value="#0b6cff"></label></div>
+            <div><label>Secondary<br><input id="colorSecondary" type="color" value="#00d084"></label></div>
+            <div><label>Background<br><input id="colorBg" type="color" value="#ffffff"></label></div>
+          </div>
+        </div>
+
+        <div class="group">
+          <label>Size</label>
+          <select id="sizeSelect">
+            <option value="128">128 × 128</option>
+            <option value="256" selected>256 × 256</option>
+            <option value="512">512 × 512</option>
+          </select>
+        </div>
+
+        <div class="actions">
+          <button id="downloadPng">Download PNG</button>
+          <button id="downloadIco">Download ICO</button>
+          <button id="randomize">Randomize</button>
+        </div>
+      </section>
+
+      <section class="preview">
+        <canvas id="logoCanvas" width="256" height="256" aria-label="Logo preview"></canvas>
+      </section>
+    </main>
+
+    <footer>
+      <small>Built with HTML, CSS, and vanilla JavaScript — exportable to PNG and ICO.</small>
+    </footer>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
