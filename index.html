@@ -34,6 +34,28 @@
         </div>
 
         <div class="group">
+          <label>Logo Image (optional)</label>
+          <div>
+            <input id="fileLogo" type="file" accept="image/*">
+            <small>Or drop a file named <strong>gear.png</strong> into the project root to load automatically.</small>
+          </div>
+        </div>
+
+        <div class="group">
+          <label>SVG Editor (editable)</label>
+          <div>
+            <button id="editSvgToggle">Show SVG Editor</button>
+            <div id="svgEditorWrap" style="display:none;margin-top:8px;">
+              <textarea id="svgEditor" style="width:100%;height:160px;font-family:monospace;font-size:12px"></textarea>
+              <div style="display:flex;gap:8px;margin-top:8px">
+                <button id="applySvg">Apply SVG</button>
+                <button id="resetSvg">Reset SVG</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="group">
           <label>Size</label>
           <select id="sizeSelect">
             <option value="128">128 × 128</option>

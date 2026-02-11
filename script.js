@@ -8,6 +8,10 @@
   const downloadPng = document.getElementById('downloadPng');
   const downloadIco = document.getElementById('downloadIco');
   const randomize = document.getElementById('randomize');
+  const fileLogo = document.getElementById('fileLogo');
+
+  let gearImage = null; // Image object loaded from gear.png or user file
+  let customSvgString = null; // if user edits or we generate an SVG
 
   function setCanvasSize(size){
     const dpr = window.devicePixelRatio || 1;
@@ -31,9 +35,71 @@
     const bg = colorBg.value;
     clearBG(bg);
     const design = document.querySelector('input[name=design]:checked').value;
-    if(design==='gear') drawGearNetwork(size,primary,secondary);
+    if(design==='gear'){
+      if(gearImage) drawGearImage(size, gearImage);
+      else {
+        // generate SVG on the fly using current colors (or use customSvgString if provided)
+        const svg = customSvgString || generateGearSVG(size, primary, secondary, bg);
+        svgStringToImage(svg, (img)=> drawGearImage(size, img));
+      }
+    }
     if(design==='chip') drawChip(size,primary,secondary);
     if(design==='hex') drawHex(size,primary,secondary);
+  }
+
+  function generateGearSVG(size, primary, secondary, bg){
+    const w = size, h = size;
+    // build gear teeth by repeating rects for each gear programmatically
+    function gearGroup(cx, cy, r, teeth, hole){
+      let s = `\n  <g transform="translate(${cx},${cy})">`;
+      for(let i=0;i<teeth;i++){
+        const ang = (i/teeth)*360;
+        // tooth positioned at radius r
+        s += `\n    <rect x="${r+2}" y="${-r*0.08}" width="${Math.max(6, r*0.18)}" height="${Math.max(6, r*0.16)}" rx="2" transform="rotate(${ang})" fill="${primary}" />`;
+      }
+      s += `\n    <circle cx="0" cy="0" r="${r}" fill="${primary}" />`;
+      if(hole){ s += `\n    <circle cx="0" cy="0" r="${r*0.45}" fill="${bg}" />`; }
+      s += `\n  </g>`;
+      return s;
+    }
+
+    // positions roughly matching the uploaded logo
+    const sx = w/2, sy = h/2;
+    const g1 = gearGroup(sx+70, sy-36, Math.round(size*0.12), 10, true);
+    const g2 = gearGroup(sx-80, sy-10, Math.round(size*0.10), 10, true);
+    const g3 = gearGroup(sx-6, sy+80, Math.round(size*0.12), 10, true);
+
+    // connectors
+    const conn = `\n  <path d="M${sx+18},${sy+6} L${sx+62},${sy-14} L${sx+110},${sy-40}" stroke="${secondary}" stroke-width="${Math.max(6,size*0.02)}" fill="none" stroke-linecap="round"/>`;
+
+    const svg = `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}' viewBox='0 0 ${w} ${h}'>\n  <rect width='100%' height='100%' fill='${bg}'/>\n  ${g1}\n  ${g2}\n  ${g3}\n  ${conn}\n</svg>`;
+    return svg;
+  }
+
+  function svgStringToImage(svgString, cb){
+    const svgBlob = new Blob([svgString], {type: 'image/svg+xml;charset=utf-8'});
+    const url = URL.createObjectURL(svgBlob);
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = function(){ URL.revokeObjectURL(url); cb(img); };
+    img.onerror = function(){ URL.revokeObjectURL(url); cb(null); };
+    img.src = url;
+  }
+  function drawGearImage(size, img){
+    // draw centered, scaled to fit (pad 10%)
+    const pad = size * 0.08;
+    const wMax = size - pad*2;
+    const hMax = size - pad*2;
+    const ratio = Math.min(wMax / img.width, hMax / img.height, 1);
+    const w = img.width * ratio;
+    const h = img.height * ratio;
+    const x = (size - w) / 2;
+    const y = (size - h) / 2;
+    ctx.save();
+    // optional subtle shadow
+    ctx.shadowColor = 'rgba(0,0,0,0.12)'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 3;
+    ctx.drawImage(img, x, y, w, h);
+    ctx.restore();
   }
 
   function drawGearNetwork(size, a, b){
@@ -175,6 +241,67 @@
   randomize.addEventListener('click',()=>{
     colorPrimary.value = randomColor(); colorSecondary.value = randomColor(); colorBg.value = ['#ffffff','#0b0b12','#f6fbff'][Math.floor(Math.random()*3)]; draw();
   });
+
+  // try to auto-load a file named 'gear.png' from project root (if present when served locally)
+  (function tryLoadLocalGear(){
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = function(){ gearImage = img; draw(); };
+    img.onerror = function(){ /* no local gear.png found */ };
+    img.src = 'gear.png';
+  })();
+
+  // allow user to upload an image which will be used for the gear design
+  if(fileLogo){
+    fileLogo.addEventListener('change', (ev)=>{
+      const f = ev.target.files && ev.target.files[0];
+      if(!f) return;
+      const reader = new FileReader();
+      reader.onload = function(e){
+        const img = new Image();
+        img.onload = function(){ gearImage = img; draw(); };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(f);
+    });
+  }
+
+  // SVG editor UI
+  const editSvgToggle = document.getElementById('editSvgToggle');
+  const svgEditorWrap = document.getElementById('svgEditorWrap');
+  const svgEditor = document.getElementById('svgEditor');
+  const applySvg = document.getElementById('applySvg');
+  const resetSvg = document.getElementById('resetSvg');
+
+  if(editSvgToggle){
+    editSvgToggle.addEventListener('click', ()=>{
+      if(svgEditorWrap.style.display === 'none'){
+        svgEditorWrap.style.display = 'block';
+        editSvgToggle.textContent = 'Hide SVG Editor';
+        // populate editor with current generated SVG
+        svgEditor.value = customSvgString || generateGearSVG(parseInt(sizeSelect.value,10), colorPrimary.value, colorSecondary.value, colorBg.value);
+      } else {
+        svgEditorWrap.style.display = 'none';
+        editSvgToggle.textContent = 'Show SVG Editor';
+      }
+    });
+  }
+
+  if(applySvg){
+    applySvg.addEventListener('click', ()=>{
+      const val = svgEditor.value.trim();
+      if(!val) return;
+      customSvgString = val;
+      gearImage = null; // prefer SVG
+      draw();
+    });
+  }
+
+  if(resetSvg){
+    resetSvg.addEventListener('click', ()=>{
+      customSvgString = null; gearImage = null; svgEditor.value = generateGearSVG(parseInt(sizeSelect.value,10), colorPrimary.value, colorSecondary.value, colorBg.value); draw();
+    });
+  }
 
   function randomColor(){ return '#'+Math.floor(Math.random()*16777215).toString(16).padStart(6,'0'); }
 
